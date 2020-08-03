@@ -1,0 +1,91 @@
+// Zoom JavaScript Web SDK Example in React
+// Signature is generated in .Net backend
+
+import React from "react";
+import { ZoomMtg } from "@zoomus/websdk";
+import * as eventsService from "../../services/eventsService";
+import { ZOOM_APIKEY } from "../../services/serviceHelpers";
+
+class ZoomIntegration extends React.Component {
+
+  componentDidMount() {
+    eventsService.get(116).then(this.eventIdSuccess).catch(this.eventIdError);
+  }
+
+  eventIdSuccess = (response) => {
+    // console.log(response)
+
+    this.generateSig(response.item.meeting);
+  };
+  eventIdError = (error) => {
+    // console.log(error)
+  };
+
+  generateSig = (meetingInfo) => {
+    const setSig = this.onSigSuccessCurry(meetingInfo);
+
+    eventsService.zoomSig(meetingInfo).then(setSig).catch(this.sigError);
+  };
+
+  onSigSuccessCurry = (info) => {
+    return (data) => {
+
+      let userEmail = this.props.currentUser.name;
+      let meetingNumber = info.meetingNumber;
+      let password = info.password;
+      let signature = data.data.item;
+
+      ZoomMtg.setZoomJSLib(`${process.env.PUBLIC_URL}/lib`, "/av");
+      ZoomMtg.preLoadWasm();
+      ZoomMtg.prepareJssdk();
+      this.setConfig(userEmail, meetingNumber, password, signature);
+    };
+  };
+
+  sigError = (error) => {
+    // console.log(error)
+  };
+
+  setConfig = (email, mNumber, password, sig) => {
+    let meetingConfig = {
+      apiKey: ZOOM_APIKEY,
+      meetingNumber: mNumber,
+      userName: "User"
+      passWord: password,
+      userEmail: email,
+      leaveUrl: "/ ",
+    };
+
+    ZoomMtg.init({
+      leaveUrl: meetingConfig.leaveUrl,
+      isSupportAV: true,
+      success: (success) => {
+        // console.log(success)
+
+        ZoomMtg.join({
+          signature: sig,
+          meetingNumber: meetingConfig.meetingNumber,
+          userName: meetingConfig.userName,
+          apiKey: meetingConfig.apiKey,
+          userEmail: meetingConfig.userEmail,
+          passWord: meetingConfig.passWord,
+          success: (success) => {
+            //console.log(success)
+          },
+          error: (error) => {
+            //console.log(error)
+          },
+        });
+      },
+      error: (error) => {
+        //console.log(error)
+      },
+    });
+  };
+
+  render() {
+    return <></>;
+  }
+}
+
+export default ZoomIntegration;
